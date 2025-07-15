@@ -7,7 +7,7 @@ const createError = require('http-errors');
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use('/', (req, res) => res.send('Hello World again!'));
+app.use('/', (req, res) => res.send('This is a POC for the github workflow!'));
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
