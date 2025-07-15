@@ -1,33 +1,43 @@
-on: push
-name: npm build, lint, test and publish
+name: Deploy Node.js App to EC2
+
+on:
+  push:
+    branches:
+      - main  # Change this to your branch (e.g., 'stage')
+
 jobs:
-  build-and-publish:
-    name: build and publish
+  deploy:
+    name: Deploy to EC2 Instance
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@master
-      - name: npm install
-        uses: actions/npm@master
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          args: install
-      - name: npm test
-        uses: actions/npm@master
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Upload code to EC2
+        uses: appleboy/scp-action@v0.1.7
         with:
-          args: run test
-      - name: npm lint
-        uses: actions/npm@master
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "."
+          target: "/home/${{ secrets.EC2_USER }}/nodeapp"
+
+      - name: Run commands on EC2
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          args: run lint
-      - name: docker build
-        uses: actions/docker/cli@master
-        with:
-          args: build -t abhinavdhasmana/github-action-example-node .
-      - name: docker login
-        uses: actions/docker/login@master
-        env:
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      - name: docker push
-        uses: actions/docker/cli@master
-        with:
-          args: push abhinavdhasmana/github-action-example-node
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.EC2_USER }}/nodeapp
+            npm ci
+            pm2 restart nodeapp || pm2 start server.js --name nodeapp
